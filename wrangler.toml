@@ -12,4 +12,4 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "contractor-db"
-database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+database_id = "74d3a0d4-c943-4c04-9b46-8c229271df7a"
