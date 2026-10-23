@@ -46,6 +46,11 @@
     }
     button:hover { background: #2563eb; }
     button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-secondary {
+      background: #475569;
+      margin-bottom: 14px;
+    }
+    .btn-secondary:hover { background: #64748b; }
     .location-item {
       background: #0f172a;
       border-radius: 8px;
@@ -59,6 +64,11 @@
     .success { color: #4ade80; }
     .error { color: #f87171; }
     .empty { color: #64748b; text-align: center; padding: 20px; }
+    .gps-status {
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+      min-height: 1.2em;
+    }
   </style>
 </head>
 <body>
@@ -70,6 +80,12 @@
     <form id="addForm">
       <label>Contractor Name</label>
       <input type="text" id="name" placeholder="e.g. John Chan" required />
+
+      <!-- GPS Button -->
+      <button type="button" id="gpsBtn" class="btn-secondary">
+        📍 Use My Current Location (GPS)
+      </button>
+      <div id="gpsStatus" class="gps-status"></div>
 
       <label>Latitude</label>
       <input type="number" id="lat" step="any" placeholder="22.3193" required />
@@ -100,6 +116,64 @@
   <script>
     const API_BASE = "/api";
 
+    // ========== GPS / Geolocation ==========
+    const gpsBtn = document.getElementById("gpsBtn");
+    const gpsStatus = document.getElementById("gpsStatus");
+
+    gpsBtn.addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        gpsStatus.textContent = "GPS is not supported on this device/browser.";
+        gpsStatus.className = "gps-status error";
+        return;
+      }
+
+      gpsBtn.disabled = true;
+      gpsStatus.textContent = "Getting your location... Please allow location access.";
+      gpsStatus.className = "gps-status";
+
+      navigator.geolocation.getCurrentPosition(
+        // Success
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+
+          document.getElementById("lat").value = lat.toFixed(6);
+          document.getElementById("lng").value = lng.toFixed(6);
+
+          gpsStatus.textContent = `Location found: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+          gpsStatus.className = "gps-status success";
+          gpsBtn.disabled = false;
+        },
+        // Error
+        (error) => {
+          let msg = "Could not get location. ";
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              msg += "You denied the permission. Please allow location access and try again.";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              msg += "Location information is unavailable.";
+              break;
+            case error.TIMEOUT:
+              msg += "Request timed out. Try again.";
+              break;
+            default:
+              msg += "Unknown error.";
+          }
+          gpsStatus.textContent = msg;
+          gpsStatus.className = "gps-status error";
+          gpsBtn.disabled = false;
+        },
+        // Options
+        {
+          enableHighAccuracy: true,   // use GPS if available
+          timeout: 15000,             // 15 seconds
+          maximumAge: 0               // don't use cached position
+        }
+      );
+    });
+
+    // ========== LOAD LOCATIONS ==========
     async function loadLocations() {
       const list = document.getElementById("locationsList");
       list.innerHTML = `<div class="empty">Loading...</div>`;
@@ -130,6 +204,7 @@
       }
     }
 
+    // ========== ADD LOCATION ==========
     document.getElementById("addForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const btn = document.getElementById("submitBtn");
@@ -161,6 +236,7 @@
         status.textContent = "Saved successfully!";
         status.className = "status success";
         document.getElementById("addForm").reset();
+        gpsStatus.textContent = "";
         loadLocations();
       } catch (err) {
         status.textContent = "Error: " + err.message;
